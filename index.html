@@ -1,143 +1,190 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema 4C - Periodização</title>
-    <style>
-        body { font-family: Arial; background:#111; color:#eee; margin:0;}
-        header { background:#222; padding:20px; text-align:center;}
-        nav { display:flex; justify-content:center; background:#333; gap:10px;}
-        nav button { padding:10px 20px; border:none; background:none; color:white; cursor:pointer;}
-        nav button:hover { background:#555;}
-        .container { max-width:1200px; margin:20px auto; padding:20px;}
-        .tab { display:none;}
-        .tab.active { display:block;}
-        .card { background:#1e1e1e; padding:20px; margin:15px 0; border-radius:8px; border-left:4px solid #4CAF50;}
-        .card h3 { color:#4CAF50;}
-        input, select { width:100%; padding:10px; margin:8px 0; background:#2a2a2a; border:1px solid #444; color:#eee; border-radius:4px;}
-        button.action { background:#4CAF50; color:white; border:none; padding:10px 20px; cursor:pointer; border-radius:4px; margin-top:10px;}
-        button.add { background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; margin:5px 0;}
-        button.delete { background:#f44336; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; margin:5px 0;}
-        .fase-box { background:#2a2a2a; padding:15px; margin:10px 0; border-radius:4px; border:1px solid #444;}
-        .fase-box b { display:block; color:#4CAF50; margin-bottom:8px;}
-        .exercicio-box { background:#333; padding:10px; margin:8px 0; border-radius:4px; border-left:3px solid #4CAF50;}
-    </style>
-</head>
-<body>
-
-<header>
-    <h1>💪 Sistema 4C - Periodização de Treinos</h1>
-</header>
-
-<nav>
-    <button onclick="showTab('cadastro')">Cadastrar</button>
-    <button onclick="showTab('lista')">Clientes</button>
-</nav>
-
-<div class="container">
-    <div id="cadastro" class="tab active">
-        <div class="card">
-            <h3>Novo Cliente</h3>
-            <input id="nome" placeholder="Nome do cliente">
-            <select id="objetivo">
-                <option value="">Selecione o objetivo...</option>
-                <option value="emagrecimento">Emagrecimento</option>
-                <option value="hipertrofia">Hipertrofia</option>
-                <option value="enrijecimento">Enrijecimento</option>
-                <option value="recomposicao">Recomposição</option>
-                <option value="definicao">Definição</option>
-            </select>
-            <button class="action" onclick="salvarCliente()">Salvar Cliente</button>
-        </div>
-    </div>
-    <div id="lista" class="tab"></div>
-</div>
-
 <script>
+
+// BANCO DE FASES COMPLETO
 const fasesDB = {
-    F1: {nome:"Base", reps:"15–20", series:"3–4", carga:"50–60%", rest:"30–60s"},
-    F2: {nome:"Hipertrofia", reps:"8–12", series:"4–5", carga:"65–75%", rest:"60–90s"},
-    F3: {nome:"Força", reps:"3–6", series:"4–6", carga:"80–90%", rest:"90–150s"},
-    F4: {nome:"Metabólico", reps:"12–20", series:"3–5", carga:"60–70%", rest:"15–45s"},
-    F5: {nome:"Recomposição", reps:"6–12", series:"4–5", carga:"70–80%", rest:"60–90s"},
-    F6: {nome:"Choque", reps:"10–15", series:"3–4", carga:"50–65%", rest:"mínimo"},
-    F7: {nome:"Deload", reps:"8–12", series:"2–3", carga:"40–50%", rest:"60–90s"}
+
+F1: {
+nome: "Base",
+semanas: 4,
+repsMin: 150,
+repsMax: 250,
+series: "3–4",
+reps: "15–20",
+carga: "50–60%",
+progressao: [1.0, 1.1, 1.15, 0.8]
+},
+
+F2: {
+nome: "Hipertrofia",
+semanas: 6,
+repsMin: 100,
+repsMax: 180,
+series: "4–5",
+reps: "8–12",
+carga: "65–75%",
+progressao: [1.0, 1.1, 1.15, 1.2, 1.1, 0.85]
+},
+
+F3: {
+nome: "Força",
+semanas: 4,
+repsMin: 60,
+repsMax: 120,
+series: "4–6",
+reps: "3–6",
+carga: "80–90%",
+progressao: [1.0, 1.05, 1.1, 0.85]
+},
+
+F4: {
+nome: "Metabólico",
+semanas: 5,
+repsMin: 180,
+repsMax: 300,
+series: "3–5",
+reps: "12–20",
+carga: "60–70%",
+progressao: [1.0, 1.1, 1.2, 1.25, 0.85]
+},
+
+F5: {
+nome: "Recomposição",
+semanas: 5,
+repsMin: 100,
+repsMax: 160,
+series: "4–5",
+reps: "6–12",
+carga: "70–80%",
+progressao: [1.0, 1.1, 1.15, 1.1, 0.85]
+},
+
+F6: {
+nome: "Choque",
+semanas: 2,
+repsMin: 140,
+repsMax: 200,
+series: "3–4",
+reps: "10–15",
+carga: "50–65%",
+progressao: [1.2, 0.7]
+},
+
+F7: {
+nome: "Deload",
+semanas: 1,
+repsMin: 80,
+repsMax: 120,
+series: "2–3",
+reps: "8–12",
+carga: "40–50%",
+progressao: [0.6]
+}
+
 };
 
+
+// ORDEM DAS FASES
 function gerarFases(obj){
-    if(obj==="emagrecimento") return ["F1","F4","F3","F6","F7"];
-    if(obj==="hipertrofia") return ["F1","F2","F3","F2","F7"];
-    if(obj==="enrijecimento") return ["F1","F2","F5","F4","F7"];
-    if(obj==="recomposicao") return ["F1","F2","F5","F3","F7"];
-    if(obj==="definicao") return ["F1","F3","F4","F6","F7"];
+if(obj==="emagrecimento") return ["F1","F4","F3","F6","F7"];
+if(obj==="hipertrofia") return ["F1","F2","F3","F2","F7"];
+if(obj==="enrijecimento") return ["F1","F2","F5","F4","F7"];
+if(obj==="recomposicao") return ["F1","F2","F5","F3","F7"];
+if(obj==="definicao") return ["F1","F3","F4","F6","F7"];
 }
 
-function showTab(tab){
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(tab).classList.add('active');
-    if(tab === 'lista') carregarClientes();
+
+// GERAR PLANEJAMENTO COMPLETO
+function gerarPlanejamento(obj){
+
+let fases = gerarFases(obj);
+
+let resultado = "";
+
+fases.forEach(f => {
+
+let fase = fasesDB[f];
+
+resultado += `<div class="card">
+<h3>${f} - ${fase.nome}</h3>
+<p>Séries: ${fase.series} | Reps: ${fase.reps} | Carga: ${fase.carga}</p>
+`;
+
+fase.progressao.forEach((p, i) => {
+
+let min = Math.round(fase.repsMin * p);
+let max = Math.round(fase.repsMax * p);
+
+resultado += `
+<div style="border-top:1px solid #444; padding:8px;">
+<b>Semana ${i+1}</b><br>
+Volume alvo: ${min} – ${max} reps/semana
+</div>
+`;
+
+});
+
+resultado += `</div>`;
+
+});
+
+return resultado;
+
 }
 
+
+// SALVAR CLIENTE
 function salvarCliente(){
-    let nome = document.getElementById("nome").value;
-    let objetivo = document.getElementById("objetivo").value;
-    if(!nome || !objetivo) { alert("Preencha todos os campos!"); return; }
-    let fases = gerarFases(objetivo);
-    let cliente = {nome, objetivo, fases, treinos: {}};
-    fases.forEach(f => {
-        cliente.treinos[f] = [{exercicio:"", series:fasesDB[f].series, reps:fasesDB[f].reps, carga:fasesDB[f].carga, rest:fasesDB[f].rest}];
-    });
-    let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
-    clientes.push(cliente);
-    localStorage.setItem("clientes", JSON.stringify(clientes));
-    alert("Cliente salvo!");
-    document.getElementById("nome").value="";
-    document.getElementById("objetivo").value="";
+
+let nome = document.getElementById("nome").value;
+let objetivo = document.getElementById("objetivo").value;
+
+let html = gerarPlanejamento(objetivo);
+
+let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+
+clientes.push({
+nome,
+objetivo,
+plano: html
+});
+
+localStorage.setItem("clientes", JSON.stringify(clientes));
+
+alert("Planejamento criado!");
+
 }
 
+
+// MOSTRAR
 function carregarClientes(){
-    let lista = document.getElementById("lista");
-    lista.innerHTML="";
-    let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
-    if(clientes.length === 0) { lista.innerHTML = "<p style='text-align:center; color:#999;'>Nenhum cliente cadastrado</p>"; return; }
-    clientes.forEach((c, i) => {
-        let html = `<div class="card"><h3>${c.nome}</h3><p><strong>Objetivo:</strong> ${c.objetivo}</p>`;
-        c.fases.forEach(f => {
-            let dados = fasesDB[f];
-            html += `<div class="fase-box"><b>${f} - ${dados.nome}</b><small>Reps: ${dados.reps} | Séries: ${dados.series} | Carga: ${dados.carga} | Rest: ${dados.rest}</small>`;
-            c.treinos[f].forEach((t, j) => {
-                html += `<div class="exercicio-box"><input placeholder="Exercício" value="${t.exercicio}" onchange="update(${i}, '${f}', ${j}, 'exercicio', this.value)"><input placeholder="Séries" value="${t.series}" onchange="update(${i}, '${f}', ${j}, 'series', this.value)"><input placeholder="Reps" value="${t.reps}" onchange="update(${i}, '${f}', ${j}, 'reps', this.value)"><input placeholder="Carga" value="${t.carga}" onchange="update(${i}, '${f}', ${j}, 'carga', this.value)"><input placeholder="Rest" value="${t.rest}" onchange="update(${i}, '${f}', ${j}, 'rest', this.value)"></div>`;
-            });
-            html += `<button class="add" onclick="addExercicio(${i}, '${f}')">+ Exercício</button></div>`;
-        });
-        html += `<button class="delete" onclick="excluir(${i})">Deletar Cliente</button></div>`;
-        lista.innerHTML += html;
-    });
+
+let lista = document.getElementById("lista");
+lista.innerHTML = "";
+
+let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+
+clientes.forEach((c,i)=>{
+
+lista.innerHTML += `
+<div class="card">
+<h2>${c.nome}</h2>
+<p>${c.objetivo}</p>
+${c.plano}
+<button onclick="excluir(${i})">Excluir</button>
+</div>
+`;
+
+});
+
 }
 
-function update(i, fase, j, campo, valor){
-    let clientes = JSON.parse(localStorage.getItem("clientes"));
-    clientes[i].treinos[fase][j][campo] = valor;
-    localStorage.setItem("clientes", JSON.stringify(clientes));
-}
 
-function addExercicio(i, fase){
-    let clientes = JSON.parse(localStorage.getItem("clientes"));
-    clientes[i].treinos[fase].push({exercicio:"", series:fasesDB[fase].series, reps:fasesDB[fase].reps, carga:fasesDB[fase].carga, rest:fasesDB[fase].rest});
-    localStorage.setItem("clientes", JSON.stringify(clientes));
-    carregarClientes();
-}
-
+// EXCLUIR
 function excluir(i){
-    if(confirm("Tem certeza?")) {
-        let clientes = JSON.parse(localStorage.getItem("clientes"));
-        clientes.splice(i,1);
-        localStorage.setItem("clientes", JSON.stringify(clientes));
-        carregarClientes();
-    }
+let clientes = JSON.parse(localStorage.getItem("clientes"));
+clientes.splice(i,1);
+localStorage.setItem("clientes", JSON.stringify(clientes));
+carregarClientes();
 }
-</script>
 
-</body>
-</html>
+    </script>
