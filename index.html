@@ -1,190 +1,46 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Periodization System</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #form { margin: 20px; }
+        #output { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="form">
+        <h1>Training Periodization System</h1>
+        <label for="duration">Training Duration (weeks): </label>
+        <input type="number" id="duration" required min="1">
+        <button id="submit">Calculate</button>
+    </div>
+    <div id="output"></div>
+    <script>
+        document.getElementById('submit').addEventListener('click', function() {
+            var duration = parseInt(document.getElementById('duration').value);
+            var outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = '';
 
-// BANCO DE FASES COMPLETO
-const fasesDB = {
+            if (!duration || duration < 1) {
+                outputDiv.innerHTML = 'Please enter a valid duration.';
+                return;
+            }
 
-F1: {
-nome: "Base",
-semanas: 4,
-repsMin: 150,
-repsMax: 250,
-series: "3–4",
-reps: "15–20",
-carga: "50–60%",
-progressao: [1.0, 1.1, 1.15, 0.8]
-},
+            var periodization = calculatePeriodization(duration);
+            outputDiv.innerHTML = '<h2>Periodization Plan:</h2><pre>' + JSON.stringify(periodization, null, 2) + '</pre>';
+        });
 
-F2: {
-nome: "Hipertrofia",
-semanas: 6,
-repsMin: 100,
-repsMax: 180,
-series: "4–5",
-reps: "8–12",
-carga: "65–75%",
-progressao: [1.0, 1.1, 1.15, 1.2, 1.1, 0.85]
-},
-
-F3: {
-nome: "Força",
-semanas: 4,
-repsMin: 60,
-repsMax: 120,
-series: "4–6",
-reps: "3–6",
-carga: "80–90%",
-progressao: [1.0, 1.05, 1.1, 0.85]
-},
-
-F4: {
-nome: "Metabólico",
-semanas: 5,
-repsMin: 180,
-repsMax: 300,
-series: "3–5",
-reps: "12–20",
-carga: "60–70%",
-progressao: [1.0, 1.1, 1.2, 1.25, 0.85]
-},
-
-F5: {
-nome: "Recomposição",
-semanas: 5,
-repsMin: 100,
-repsMax: 160,
-series: "4–5",
-reps: "6–12",
-carga: "70–80%",
-progressao: [1.0, 1.1, 1.15, 1.1, 0.85]
-},
-
-F6: {
-nome: "Choque",
-semanas: 2,
-repsMin: 140,
-repsMax: 200,
-series: "3–4",
-reps: "10–15",
-carga: "50–65%",
-progressao: [1.2, 0.7]
-},
-
-F7: {
-nome: "Deload",
-semanas: 1,
-repsMin: 80,
-repsMax: 120,
-series: "2–3",
-reps: "8–12",
-carga: "40–50%",
-progressao: [0.6]
-}
-
-};
-
-
-// ORDEM DAS FASES
-function gerarFases(obj){
-if(obj==="emagrecimento") return ["F1","F4","F3","F6","F7"];
-if(obj==="hipertrofia") return ["F1","F2","F3","F2","F7"];
-if(obj==="enrijecimento") return ["F1","F2","F5","F4","F7"];
-if(obj==="recomposicao") return ["F1","F2","F5","F3","F7"];
-if(obj==="definicao") return ["F1","F3","F4","F6","F7"];
-}
-
-
-// GERAR PLANEJAMENTO COMPLETO
-function gerarPlanejamento(obj){
-
-let fases = gerarFases(obj);
-
-let resultado = "";
-
-fases.forEach(f => {
-
-let fase = fasesDB[f];
-
-resultado += `<div class="card">
-<h3>${f} - ${fase.nome}</h3>
-<p>Séries: ${fase.series} | Reps: ${fase.reps} | Carga: ${fase.carga}</p>
-`;
-
-fase.progressao.forEach((p, i) => {
-
-let min = Math.round(fase.repsMin * p);
-let max = Math.round(fase.repsMax * p);
-
-resultado += `
-<div style="border-top:1px solid #444; padding:8px;">
-<b>Semana ${i+1}</b><br>
-Volume alvo: ${min} – ${max} reps/semana
-</div>
-`;
-
-});
-
-resultado += `</div>`;
-
-});
-
-return resultado;
-
-}
-
-
-// SALVAR CLIENTE
-function salvarCliente(){
-
-let nome = document.getElementById("nome").value;
-let objetivo = document.getElementById("objetivo").value;
-
-let html = gerarPlanejamento(objetivo);
-
-let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
-
-clientes.push({
-nome,
-objetivo,
-plano: html
-});
-
-localStorage.setItem("clientes", JSON.stringify(clientes));
-
-alert("Planejamento criado!");
-
-}
-
-
-// MOSTRAR
-function carregarClientes(){
-
-let lista = document.getElementById("lista");
-lista.innerHTML = "";
-
-let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
-
-clientes.forEach((c,i)=>{
-
-lista.innerHTML += `
-<div class="card">
-<h2>${c.nome}</h2>
-<p>${c.objetivo}</p>
-${c.plano}
-<button onclick="excluir(${i})">Excluir</button>
-</div>
-`;
-
-});
-
-}
-
-
-// EXCLUIR
-function excluir(i){
-let clientes = JSON.parse(localStorage.getItem("clientes"));
-clientes.splice(i,1);
-localStorage.setItem("clientes", JSON.stringify(clientes));
-carregarClientes();
-}
-
+        function calculatePeriodization(weeks) {
+            var phases = {
+                "Preparation": Math.ceil(weeks * 0.3),
+                "Competitive": Math.ceil(weeks * 0.5),
+                "Transition": Math.ceil(weeks * 0.2)
+            };
+            return phases;
+        }
     </script>
+</body>
+</html>
